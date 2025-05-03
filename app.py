@@ -27,6 +27,17 @@ def load_family_tree_from_db(root_id="P1"):
             "url": f"https://abc.com?id={data['id']}"
         }
 
+        # First, load children
+        children_str = data.get("children_ids", "")
+        children = []
+        for cid in children_str.split(";"):
+            cid = cid.strip()
+            if cid:
+                child = get_person(cid)
+                if child:
+                    children.append(child)
+
+        # Then, check for spouse and create couple node if married
         spouse_id = data.get("spouse_id")
         spouse_node = None
         if spouse_id:
@@ -38,23 +49,13 @@ def load_family_tree_from_db(root_id="P1"):
                 "type": "couple",
                 "husband": node if node["gender"] == "M" else spouse_node,
                 "wife": spouse_node if node["gender"] == "M" else node,
-                "children": []
+                "children": children
             }
-            node = couple_node
-
-        children_str = data.get("children_ids", "")
-        children = []
-        for cid in children_str.split(";"):
-            cid = cid.strip()
-            if cid:
-                child = get_person(cid)
-                if child:
-                    children.append(child)
-
-        if children:
-            node["children"] = children
-
-        return node
+            return couple_node
+        else:
+            if children:
+                node["children"] = children
+            return node
 
     result = get_person(root_id)
     conn.close()
