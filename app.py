@@ -4,7 +4,7 @@ import json
 
 st.set_page_config(layout="wide", page_title="Interactive Family Tree")
 
-# Get query param
+# Read query param
 params = st.query_params
 query_id = params.get("id", None)
 
@@ -20,7 +20,15 @@ def load_family_tree_from_db(root_id):
     conn = sqlite3.connect("family_tree.db")
     cursor = conn.cursor()
 
+    def clean_id(raw):
+        """Convert float-like IDs like 2.0 to '2'"""
+        try:
+            return str(int(float(raw))).strip()
+        except:
+            return str(raw).strip()
+
     def get_person(pid):
+        pid = clean_id(pid)
         st.write(f"🟣 Fetching person with ID: {pid}")
         cursor.execute("SELECT * FROM people WHERE id = ?", (pid,))
         row = cursor.fetchone()
@@ -31,30 +39,34 @@ def load_family_tree_from_db(root_id):
         columns = [desc[0] for desc in cursor.description]
         data = dict(zip(columns, row))
 
-        st.write(f"✅ Loaded: {data['id']} - {data['name']}")
+        node_id = clean_id(data["id"])
+        st.write(f"✅ Loaded: {node_id} - {data['name']}")
 
         node = {
-            "id": data["id"],
+            "id": node_id,
             "name": data["name"],
             "gender": data.get("gender", "U"),
             "dob": data["dob"],
             "valavu": data["valavu"],
             "is_alive": data["alive"] == "Yes",
-            "url": f"https://abc.com?id={data['id']}"
+            "url": f"https://abc.com?id={node_id}"
         }
 
-        children_str = data.get("children_ids", "")
+        # Normalize and fetch children
         children = []
+        children_str = data.get("children_ids", "")
         if children_str:
             st.write(f"📦 {data['name']} has children: {children_str}")
         for cid in children_str.split(";"):
-            cid = cid.strip()
+            cid = clean_id(cid)
             if cid:
                 child = get_person(cid)
                 if child:
                     children.append(child)
 
-        spouse_id = data.get("spouse_id")
+        # Normalize and fetch spouse
+        spouse_id_raw = data.get("spouse_id")
+        spouse_id = clean_id(spouse_id_raw) if spouse_id_raw and spouse_id_raw != "nan" else ""
         spouse_node = None
         if spouse_id:
             st.write(f"💍 {data['name']} has spouse ID: {spouse_id}")
@@ -63,7 +75,7 @@ def load_family_tree_from_db(root_id):
         if spouse_node:
             st.write(f"🔗 Creating couple node for: {data['name']} + {spouse_node['name']}")
             couple_node = {
-                "id": f"{data['id']}_couple",
+                "id": f"{node_id}_couple",
                 "type": "couple",
                 "husband": node if node["gender"] == "M" else spouse_node,
                 "wife": spouse_node if node["gender"] == "M" else node,
