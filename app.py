@@ -27,6 +27,7 @@ def load_family_tree_from_db(root_id="P1"):
         node = {
             "id": data["id"],
             "name": data["name"],
+            "gender": data.get("gender", "U"),
             "dob": data["dob"],
             "valavu": data["valavu"],
             "is_alive": data["alive"] == "Yes",
@@ -42,11 +43,11 @@ def load_family_tree_from_db(root_id="P1"):
         if spouse_node:
             couple_node = {
                 "id": f"{data['id']}_couple",
-                "name": f"{data['name']} + {spouse_node['name']}",
-                "children": [],
-                "url": node["url"]
+                "type": "couple",
+                "husband": node if node["gender"] == "M" else spouse_node,
+                "wife": spouse_node if node["gender"] == "M" else node,
+                "children": []
             }
-            couple_node["spouse"] = spouse_node
             node = couple_node
 
         children_str = data.get("children_ids", "")
@@ -72,7 +73,7 @@ def get_d3_tree_html(tree_data):
     return f"""
     <div id='tree'></div>
     <style>
-        .node rect {{ fill: #fff; stroke: #333; stroke-width: 1.5px; }}
+        .node rect {{ stroke: #333; stroke-width: 1.5px; }}
         .node text {{ font: 12px sans-serif; pointer-events: none; }}
         .link {{ fill: none; stroke: #ccc; stroke-width: 1.5px; }}
     </style>
@@ -81,7 +82,7 @@ def get_d3_tree_html(tree_data):
         const treeData = {json.dumps(tree_data)};
         console.log("Rendering treeData:", treeData);
 
-        const width = 1000, height = 600;
+        const width = 1200, height = 700;
         const svg = d3.select("#tree")
             .append("svg")
             .attr("width", width)
@@ -93,7 +94,7 @@ def get_d3_tree_html(tree_data):
         const root = d3.hierarchy(treeData, d => d.children);
         treeLayout(root);
 
-        svg.selectAll('link')
+        svg.selectAll('path.link')
             .data(root.links())
             .enter()
             .append('path')
@@ -109,25 +110,38 @@ def get_d3_tree_html(tree_data):
             .attr('class', 'node')
             .attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
 
-        node.append('rect')
-            .attr('width', 140)
-            .attr('height', 60)
-            .attr('x', -70)
-            .attr('y', -30)
-            .style('fill', '#f9f9f9')
-            .style('stroke', '#333');
-
-        node.append('a')
-            .attr('xlink:href', d => d.data.url)
-            .append('text')
-            .attr('text-anchor', 'middle')
-            .attr('dy', '-0.5em')
-            .text(d => d.data.name);
-
-        node.append('text')
-            .attr('text-anchor', 'middle')
-            .attr('dy', '1.2em')
-            .text(d => (d.data.dob || '') + ' ' + (d.data.valavu || ''));
+        node.each(function(d) {
+            if (d.data.type === 'couple') {
+                const g = d3.select(this);
+                g.append('rect')
+                    .attr('x', -70).attr('y', -40).attr('width', 140).attr('height', 30)
+                    .style('fill', '#d0e1f9');
+                g.append('text')
+                    .attr('x', 0).attr('y', -20)
+                    .attr('text-anchor', 'middle')
+                    .text(d.data.husband.name);
+                g.append('rect')
+                    .attr('x', -70).attr('y', -10).attr('width', 140).attr('height', 30)
+                    .style('fill', '#f9d0f0');
+                g.append('text')
+                    .attr('x', 0).attr('y', 10)
+                    .attr('text-anchor', 'middle')
+                    .text(d.data.wife.name);
+            } else {
+                const g = d3.select(this);
+                g.append('rect')
+                    .attr('x', -70).attr('y', -30).attr('width', 140).attr('height', 60)
+                    .style('fill', d.data.gender === 'F' ? '#f9d0f0' : '#d0e1f9');
+                g.append('text')
+                    .attr('x', 0).attr('y', -5)
+                    .attr('text-anchor', 'middle')
+                    .text(d.data.name);
+                g.append('text')
+                    .attr('x', 0).attr('y', 15)
+                    .attr('text-anchor', 'middle')
+                    .text((d.data.dob || '') + ' ' + (d.data.valavu || ''));
+            }
+        });
     </script>
     """
 
@@ -142,6 +156,6 @@ tree_data = load_family_tree_from_db(query_id)
 
 if tree_data:
     d3_html = get_d3_tree_html(tree_data)
-    st.components.v1.html(d3_html, height=700, scrolling=True)
+    st.components.v1.html(d3_html, height=750, scrolling=True)
 else:
     st.warning("No data found for the given ID.")
