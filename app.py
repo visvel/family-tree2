@@ -4,7 +4,7 @@ import json
 
 st.set_page_config(layout="wide", page_title="Interactive Family Tree")
 
-# --- Get query param ---
+# Get query param
 params = st.query_params
 query_id = params.get("id", None)
 
@@ -16,7 +16,6 @@ if not query_id:
 
 st.write(f"🔵 Loading tree for ID: {query_id}")
 
-# --- Load Data ---
 def load_family_tree_from_db(root_id):
     conn = sqlite3.connect("family_tree.db")
     cursor = conn.cursor()
@@ -31,6 +30,7 @@ def load_family_tree_from_db(root_id):
 
         columns = [desc[0] for desc in cursor.description]
         data = dict(zip(columns, row))
+
         st.write(f"✅ Loaded: {data['id']} - {data['name']}")
 
         node = {
@@ -43,7 +43,6 @@ def load_family_tree_from_db(root_id):
             "url": f"https://abc.com?id={data['id']}"
         }
 
-        # Load children
         children_str = data.get("children_ids", "")
         children = []
         if children_str:
@@ -55,7 +54,6 @@ def load_family_tree_from_db(root_id):
                 if child:
                     children.append(child)
 
-        # Load spouse
         spouse_id = data.get("spouse_id")
         spouse_node = None
         if spouse_id:
@@ -81,16 +79,17 @@ def load_family_tree_from_db(root_id):
     conn.close()
     return result
 
-# --- Load tree data ---
 tree_data = load_family_tree_from_db(query_id)
 
 if tree_data:
     st.write("🧩 Tree structure loaded. Injecting tree.html iframe...")
     iframe_html = f"""
     <script>
-    localStorage.setItem('treeData', {json.dumps(tree_data)});
+      localStorage.setItem('treeData', {json.dumps(tree_data)});
+      console.log("📦 treeData injected into localStorage");
     </script>
-    <iframe src="/static/tree.html" width="100%" height="750" style="border:none;"></iframe>
+    <iframe src="/static/tree.html" width="100%" height="750" style="border:none;"
+            onload="console.log('✅ iframe loaded');"></iframe>
     """
     st.components.v1.html(iframe_html, height=800, scrolling=True)
 else:
