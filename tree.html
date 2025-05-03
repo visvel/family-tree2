@@ -1,28 +1,22 @@
-<!-- tree.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8">
+  <title>Family Tree</title>
   <style>
-    body { margin: 0; }
-    .node rect { fill: #fff; stroke: #333; stroke-width: 1.5px; }
+    .node rect { stroke: #333; stroke-width: 1.5px; }
     .node text { font: 12px sans-serif; pointer-events: none; }
     .link { fill: none; stroke: #ccc; stroke-width: 1.5px; }
-    .expand-icon {
-      font-size: 18px;
-      cursor: pointer;
-      user-select: none;
-    }
   </style>
 </head>
 <body>
   <div id="tree"></div>
-
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script>
-    const treeData = JSON.parse(localStorage.getItem('treeData'));
+    const treeData = JSON.parse(localStorage.getItem("treeData"));
+    console.log("Rendering treeData:", treeData);
 
-    const width = 1200, height = 800;
+    const width = 1200, height = 700;
     const svg = d3.select("#tree")
       .append("svg")
       .attr("width", width)
@@ -50,35 +44,37 @@
       .attr('class', 'node')
       .attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
 
-    node.append('rect')
-      .attr('width', 140)
-      .attr('height', 60)
-      .attr('x', -70)
-      .attr('y', -30)
-      .style('fill', '#f9f9f9')
-      .style('stroke', '#333');
-
-    node.append('text')
-      .attr('text-anchor', 'middle')
-      .attr('dy', '-0.5em')
-      .style('fill', 'blue')
-      .style('cursor', 'pointer')
-      .text(d => d.data.name)
-      .on('click', d => window.open(d.data.url, '_blank'));
-
-    node.append('text')
-      .attr('text-anchor', 'middle')
-      .attr('dy', '1.2em')
-      .text(d => (d.data.dob || '') + ' ' + (d.data.valavu || ''));
-
-    node.append('text')
-      .attr('class', 'expand-icon')
-      .attr('x', 60)
-      .attr('y', -20)
-      .text('+')
-      .on('click', (event, d) => {
-        alert(`Expand details for ${d.data.name}`);
-      });
+    node.each(function(d) {
+      const g = d3.select(this);
+      if (d.data.type === 'couple') {
+        g.append('rect')
+          .attr('x', -70).attr('y', -40).attr('width', 140).attr('height', 30)
+          .style('fill', '#d0e1f9');
+        g.append('text')
+          .attr('x', 0).attr('y', -20)
+          .attr('text-anchor', 'middle')
+          .text(d.data.husband.name);
+        g.append('rect')
+          .attr('x', -70).attr('y', -10).attr('width', 140).attr('height', 30)
+          .style('fill', '#f9d0f0');
+        g.append('text')
+          .attr('x', 0).attr('y', 10)
+          .attr('text-anchor', 'middle')
+          .text(d.data.wife.name);
+      } else {
+        g.append('rect')
+          .attr('x', -70).attr('y', -30).attr('width', 140).attr('height', 60)
+          .style('fill', d.data.gender === 'F' ? '#f9d0f0' : '#d0e1f9');
+        g.append('text')
+          .attr('x', 0).attr('y', -5)
+          .attr('text-anchor', 'middle')
+          .text(d.data.name);
+        g.append('text')
+          .attr('x', 0).attr('y', 15)
+          .attr('text-anchor', 'middle')
+          .text((d.data.dob || '') + ' ' + (d.data.valavu || ''));
+      }
+    });
   </script>
 </body>
 </html>
