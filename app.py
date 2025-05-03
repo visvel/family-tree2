@@ -2,14 +2,9 @@ import streamlit as st
 import sqlite3
 import json
 
-# Set Streamlit config
 st.set_page_config(layout="wide", page_title="Interactive Family Tree")
 
-# Track first load using session state
-if "iframe_loaded" not in st.session_state:
-    st.session_state.iframe_loaded = False
-
-# Read person ID from query param
+# Read query param
 params = st.query_params
 query_id = params.get("id", None)
 
@@ -76,23 +71,16 @@ def load_family_tree_from_db(root_id):
     conn.close()
     return result
 
-# Load tree only on first render
-if not st.session_state.iframe_loaded:
-    tree_data = load_family_tree_from_db(query_id)
-    if tree_data:
-        st.session_state.iframe_loaded = True
-        setup_html = f"""
-        <script>
-        localStorage.setItem('treeData', {json.dumps(tree_data)});
-        </script>
-        <iframe src="tree.html" width="100%" height="750" style="border:none;"></iframe>
-        """
-        st.components.v1.html(setup_html, height=800, scrolling=True)
-    else:
-        st.warning("No data found for the given ID.")
-else:
-    # On rerun, avoid reloading data, just show iframe
-    iframe_html = """
-    <iframe src="tree.html" width="100%" height="750" style="border:none;"></iframe>
+# Load data
+tree_data = load_family_tree_from_db(query_id)
+
+if tree_data:
+    iframe_html = f"""
+    <script>
+    localStorage.setItem('treeData', {json.dumps(tree_data)});
+    </script>
+    <iframe src="/tree.html" width="100%" height="750" style="border:none;"></iframe>
     """
     st.components.v1.html(iframe_html, height=800, scrolling=True)
+else:
+    st.warning("No data found for the given ID.")
