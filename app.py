@@ -1,4 +1,4 @@
-# app.py
+# Note: This script requires the 'streamlit' module and assumes you run it in a Streamlit-compatible environment.
 
 try:
     import streamlit as st
@@ -8,6 +8,7 @@ except ModuleNotFoundError as e:
     raise ImportError("This script must be run in a Streamlit environment where the 'streamlit' module is available.") from e
 
 # Load data from SQLite
+
 def load_family_tree_from_db(root_id="P1"):
     conn = sqlite3.connect("family_tree.db")
     cursor = conn.cursor()
@@ -20,7 +21,10 @@ def load_family_tree_from_db(root_id="P1"):
 
         columns = [desc[0] for desc in cursor.description]
         data = dict(zip(columns, row))
-        person = {
+
+        st.write(f"Loading person: {data['id']} - {data['name']}")
+
+        node = {
             "id": data["id"],
             "name": data["name"],
             "dob": data["dob"],
@@ -30,10 +34,20 @@ def load_family_tree_from_db(root_id="P1"):
         }
 
         spouse_id = data.get("spouse_id")
+        spouse_node = None
         if spouse_id:
-            spouse = get_person(spouse_id)
-            if spouse:
-                person["spouse"] = spouse
+            spouse_node = get_person(spouse_id)
+
+        # Couple node if married
+        if spouse_node:
+            couple_node = {
+                "id": f"{data['id']}_couple",
+                "name": f"{data['name']} + {spouse_node['name']}",
+                "children": [],
+                "url": node["url"]
+            }
+            couple_node["spouse"] = spouse_node
+            node = couple_node
 
         children_str = data.get("children_ids", "")
         children = []
@@ -43,10 +57,11 @@ def load_family_tree_from_db(root_id="P1"):
                 child = get_person(cid)
                 if child:
                     children.append(child)
-        if children:
-            person["children"] = children
 
-        return person
+        if children:
+            node["children"] = children
+
+        return node
 
     result = get_person(root_id)
     conn.close()
@@ -64,6 +79,7 @@ def get_d3_tree_html(tree_data):
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
         const treeData = {json.dumps(tree_data)};
+        console.log("Rendering treeData:", treeData);
 
         const width = 1000, height = 600;
         const svg = d3.select("#tree")
@@ -119,8 +135,9 @@ def get_d3_tree_html(tree_data):
 st.set_page_config(layout="wide")
 st.title("Interactive Family Tree")
 
-params = st.experimental_get_query_params()
+params = st.query_params
 query_id = params.get("id", ["P1"])[0]
+st.write(f"Loading tree for ID: {query_id}")
 tree_data = load_family_tree_from_db(query_id)
 
 if tree_data:
