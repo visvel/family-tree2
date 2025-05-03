@@ -2,7 +2,7 @@ import streamlit as st
 import sqlite3
 import json
 
-def load_family_tree_from_db(root_id="P1"):
+def load_family_tree_from_db(root_id):
     conn = sqlite3.connect("family_tree.db")
     cursor = conn.cursor()
 
@@ -61,15 +61,15 @@ def load_family_tree_from_db(root_id="P1"):
     conn.close()
     return result
 
-# Streamlit UI
-st.set_page_config(layout="wide")
-st.title("Interactive Family Tree")
+# ✅ Setup Streamlit app
+st.set_page_config(layout="wide", page_title="Interactive Family Tree")
 
-# ✅ FIX: Handle new query param format
+# ✅ Get query param
 params = st.query_params
 query_id = params.get("id", "P1")
 st.write(f"Loading tree for ID: {query_id}")
 
+# ✅ Load tree data
 tree_data = load_family_tree_from_db(query_id)
 
 if tree_data:
