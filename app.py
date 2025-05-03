@@ -71,7 +71,6 @@ def load_family_tree_from_db(root_id):
     conn.close()
     return result
 
-# Load data
 tree_data = load_family_tree_from_db(query_id)
 
 if tree_data:
@@ -79,7 +78,7 @@ if tree_data:
     <script>
     localStorage.setItem('treeData', {json.dumps(tree_data)});
     </script>
-    <iframe src="/tree.html" width="100%" height="750" style="border:none;"></iframe>
+    <iframe src="/static/tree.html" width="100%" height="750" style="border:none;"></iframe>
     """
     st.components.v1.html(iframe_html, height=800, scrolling=True)
 else:
