@@ -27,7 +27,7 @@ def load_family_tree_from_db(root_id):
             "url": f"https://abc.com?id={data['id']}"
         }
 
-        # First, load children
+        # Load children
         children_str = data.get("children_ids", "")
         children = []
         for cid in children_str.split(";"):
@@ -37,7 +37,7 @@ def load_family_tree_from_db(root_id):
                 if child:
                     children.append(child)
 
-        # Then, check for spouse and create couple node if married
+        # Create couple node if spouse exists
         spouse_id = data.get("spouse_id")
         spouse_node = None
         if spouse_id:
@@ -61,7 +61,7 @@ def load_family_tree_from_db(root_id):
     conn.close()
     return result
 
-# ✅ Setup Streamlit app
+# ✅ Configure Streamlit
 st.set_page_config(layout="wide", page_title="Interactive Family Tree")
 
 # ✅ Get query param
@@ -69,16 +69,17 @@ params = st.query_params
 query_id = params.get("id", "P1")
 st.write(f"Loading tree for ID: {query_id}")
 
-# ✅ Load tree data
+# ✅ Load and render tree
 tree_data = load_family_tree_from_db(query_id)
 
 if tree_data:
-    setup_script = f"""
-    <script>
-    localStorage.setItem('treeData', {json.dumps(tree_data)});
-    </script>
-    <iframe src="tree.html" width="100%" height="750" style="border:none;"></iframe>
+    iframe_html = f"""
+    <iframe src="tree.html" width="100%" height="750" style="border:none;" onload="
+        if (!localStorage.getItem('treeData')) {{
+            localStorage.setItem('treeData', JSON.stringify({json.dumps(tree_data)}));
+        }}
+    "></iframe>
     """
-    st.components.v1.html(setup_script, height=800, scrolling=True)
+    st.components.v1.html(iframe_html, height=800, scrolling=True)
 else:
     st.warning("No data found for the given ID.")
