@@ -2,7 +2,7 @@
 headless = true
 enableCORS = false
 enableXsrfProtection = false
-enableStaticServing = true  # ✅ added to serve files from /public
+enableStaticServing = true
 
 [theme]
 base = "light"
