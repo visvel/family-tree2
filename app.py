@@ -91,7 +91,7 @@ def get_d3_tree_html(tree_data):
             .enter()
             .append('g')
             .attr('class', 'node')
-            .attr('transform', d => `translate($${d.x},$${d.y})`);
+            .attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
 
         node.append('rect')
             .attr('width', 140)
