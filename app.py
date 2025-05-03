@@ -4,30 +4,34 @@ import json
 
 st.set_page_config(layout="wide", page_title="Interactive Family Tree")
 
-# Read query param
+# --- Get query param ---
 params = st.query_params
 query_id = params.get("id", None)
 
+st.write("🟡 Debug: Query params received:", params)
+
 if not query_id:
-    st.warning("No person ID provided in URL. Use ?id=<UID>")
+    st.error("❌ No person ID provided in URL. Use ?id=<UID>")
     st.stop()
 
-st.write(f"Loading tree for ID: {query_id}")
+st.write(f"🔵 Loading tree for ID: {query_id}")
 
+# --- Load Data ---
 def load_family_tree_from_db(root_id):
     conn = sqlite3.connect("family_tree.db")
     cursor = conn.cursor()
 
     def get_person(pid):
+        st.write(f"🟣 Fetching person with ID: {pid}")
         cursor.execute("SELECT * FROM people WHERE id = ?", (pid,))
         row = cursor.fetchone()
         if not row:
+            st.warning(f"⚠️ No data found for ID: {pid}")
             return None
 
         columns = [desc[0] for desc in cursor.description]
         data = dict(zip(columns, row))
-
-        st.write(f"Loading person: {data['id']} - {data['name']}")
+        st.write(f"✅ Loaded: {data['id']} - {data['name']}")
 
         node = {
             "id": data["id"],
@@ -39,8 +43,11 @@ def load_family_tree_from_db(root_id):
             "url": f"https://abc.com?id={data['id']}"
         }
 
+        # Load children
         children_str = data.get("children_ids", "")
         children = []
+        if children_str:
+            st.write(f"📦 {data['name']} has children: {children_str}")
         for cid in children_str.split(";"):
             cid = cid.strip()
             if cid:
@@ -48,12 +55,15 @@ def load_family_tree_from_db(root_id):
                 if child:
                     children.append(child)
 
+        # Load spouse
         spouse_id = data.get("spouse_id")
         spouse_node = None
         if spouse_id:
+            st.write(f"💍 {data['name']} has spouse ID: {spouse_id}")
             spouse_node = get_person(spouse_id)
 
         if spouse_node:
+            st.write(f"🔗 Creating couple node for: {data['name']} + {spouse_node['name']}")
             couple_node = {
                 "id": f"{data['id']}_couple",
                 "type": "couple",
@@ -71,9 +81,11 @@ def load_family_tree_from_db(root_id):
     conn.close()
     return result
 
+# --- Load tree data ---
 tree_data = load_family_tree_from_db(query_id)
 
 if tree_data:
+    st.write("🧩 Tree structure loaded. Injecting tree.html iframe...")
     iframe_html = f"""
     <script>
     localStorage.setItem('treeData', {json.dumps(tree_data)});
@@ -82,4 +94,4 @@ if tree_data:
     """
     st.components.v1.html(iframe_html, height=800, scrolling=True)
 else:
-    st.warning("No data found for the given ID.")
+    st.error("❌ No valid family tree could be loaded for the given ID.")
